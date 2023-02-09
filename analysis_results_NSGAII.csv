@@ -1,0 +1,7 @@
+Attribute,Value
+min_n_evals,1000
+max_n_evals,1000
+mean_n_evals,1000.0
+min_exec_time [s],15104.09083890915
+max_exec_time [s],19010.364714860916
+mean_exec_time [s],15985.972225189209

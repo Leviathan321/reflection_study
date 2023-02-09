@@ -1,0 +1,11 @@
+Attribute,Value
+Problem,Demo_AVP_Reflection
+Algorithm,NSGA-II
+Fitness function,"('Critical adapted distance', 'Velocity at critical distance')"
+Critical function,CriticalAdasAdaptedDistanceVelocity
+Search time,15199.44 sec
+population_size,100
+n_func_evals_lim,1000
+n_generations,10.0
+maximal_execution_time,
+prob_mutation,0.3333333333333333
