@@ -2,9 +2,17 @@
 
 This repository holds the results of the NSGAII-DT replication study from the paper "Reflections on Surrogate-Assisted Search-Based Testing: A Taxonomy and Two Replication Studies based on Industrial ADAS and Simulink Models"
 
-The experiment has been setup using 10 runs with minimal 1000 evaluations each run.
+## Combined Results
 
-The combined results are evaiable in the top level folder.
+The *Hypervolume* analysis results are available here: [HV](/hv/) 
 
-[Here are the results of each single run of NSGAII](NSGA-II/)
-[Here are the results of each single run of NSGAII-DT](NSGA-II-DT/)
+The *Spread* analysis results are available here: [Spread](/sp/) 
+
+The *General Distance* analysis results are available here: [GD](/gd/) 
+
+
+## Results Single Runs
+
+The results of each single run of NSGAII are available here: [Single Runs NSGAII](NSGA-II/)
+
+The results of each single run of NSGAII-DT are available here: [Single Runs NSGAII-DT](NSGA-II-DT/)
