@@ -1,6 +1,24 @@
+
+import pymoo
+from algorithm.nsga2kmeans import NSGAII_KMEANS
+from evaluation.critical import *
+
+from model_ga.individual import IndividualSimulated
+pymoo.core.individual.Individual = IndividualSimulated
+
+from model_ga.population import PopulationExtended
+pymoo.core.population.Population = PopulationExtended
+
+from model_ga.result  import ResultExtended
+pymoo.core.result.Result = ResultExtended
+
+from model_ga.problem import ProblemExtended
+pymoo.core.problem.Problem = ProblemExtended
+
 import copy
 import sys
 import time
+
 from pymoo.core.result import Result
 from pymoo.termination import get_termination
 from pymoo.algorithms.moo.nsga2 import NSGA2
@@ -12,6 +30,7 @@ from pymoo.operators.sampling.lhs import LHS
 from pymoo.operators.sampling.rnd import FloatRandomSampling
 from pymoo.optimize import minimize
 from pymoo.termination import get_termination
+
 from pymoo.core.problem import Problem
 from exception.configuration import RestrictiveConfigException
 from visualization import output
@@ -28,17 +47,21 @@ from utils.time_utils import convert_pymoo_time_to_seconds
 from visualization.configuration import *
 import numpy as np
 import os
-from experiment.search_configuration import SearchConfiguration
+from experiment.search_configuration import DefaultSearchConfiguration, SearchConfiguration
 import quality_indicators.metrics.spread as qi
 from model_ga.result import *
 import logging as log
 
+''' Algorithm variations (change flags to get another version of the algorithm)'''
+USE_NDS_FOR_SEARCH = True
+SEARCH_WITH_BOUNDARIES = False
 
 '''General flags'''
-ALGORITHM_NAME = "NSGA-II-DT"
-RESULTS_FOLDER = os.sep + "results" + os.sep
+ALGORITHM_NAME = "NSGA-II-DT" 
+RESULTS_FOLDER = os.sep + "results" + os.sep + "single" +  os.sep
 DO_EVAL_APPROXIMATION = True
 WRITE_ALL_INDIVIDUALS = False
+EXPERIMENTAL_MODE=False
 
 class NSGAII_DT_SIM(object):
 
@@ -52,6 +75,8 @@ class NSGAII_DT_SIM(object):
         self.config = config
         self.done_tree_iterations = 0
         self.res = None
+
+        log.info(f"Initialized algorithm with config: {config.__dict__}")
         
     def run(self) -> ResultExtended:
         problem = self.problem
@@ -76,6 +101,7 @@ class NSGAII_DT_SIM(object):
         xl = problem.xl
         xu = problem.xu
 
+        # sampling = FloatRandomSampling()
         sampling = LHS()  # Latin Hypercube Sampling
         initial_population = sampling(problem, population_size)
         hist_holder = []
@@ -130,7 +156,7 @@ class NSGAII_DT_SIM(object):
             mutation=PM(prob=prob_mutation, eta=eta_mutation),
             eliminate_duplicates=True)
 
-        tree_iteration = 0 
+        tree_iteration = 0
         n_func_evals = 0
         while n_func_evals < config.n_func_evals_lim:
             # extend the history by one generation
@@ -139,15 +165,25 @@ class NSGAII_DT_SIM(object):
             log.info(f"running iteration {tree_iteration}")
             for critical_region in critical_regions:
 
-                sub_problem = problem
+                if SEARCH_WITH_BOUNDARIES:
+                    sub_problem = copy.deepcopy(problem)
+                    sub_problem.xl = critical_region.xl
+                    sub_problem.xu = critical_region.xu
+                else:
+                    sub_problem = problem
+
                 if prob_mutation == None:
                     prob_mutation = 1 / problem.n_var
 
-                nd_individuals_region = calc_nondominated_individuals(
-                    critical_region.population)
-                initial_population = Population(
-                    individuals=nd_individuals_region)
-                pop_size = len(initial_population)
+                if USE_NDS_FOR_SEARCH:
+                    nd_individuals_region = calc_nondominated_individuals(
+                        critical_region.population)
+                    initial_population = Population(
+                        individuals=nd_individuals_region)
+                    pop_size = len(initial_population)
+                else:
+                    initial_population = critical_region.population
+                    pop_size = len(initial_population)
 
                 algorithm = NSGA2(
                     pop_size=pop_size,
@@ -168,18 +204,7 @@ class NSGAII_DT_SIM(object):
 
                 n_func_evals += res.history[-1].evaluator.n_eval
 
-                for i in range(inner_num_gen):
-                    pop = Population.merge(
-                        hist_holder[tree_iteration * inner_num_gen + i].pop, res.history[i].pop)
-                    # copy a template of the inner algorithm, and then modify its population and other properties
-                    algo = copy.deepcopy(inner_algorithm)
-                    algo.pop = pop
-                    # algo._set_optimum()
-                    opt_pop = Population(
-                        individuals=calc_nondominated_individuals(pop))
-                    algo.opt = opt_pop
-                    # algo.evaluator.n_eval += i + inner_num_gen * tree_iteration
-                    hist_holder[tree_iteration * inner_num_gen + i] = algo
+                self.update_history(res, hist_holder, tree_iteration, inner_num_gen, inner_algorithm)
 
                 hist = res.history
 
@@ -206,7 +231,23 @@ class NSGAII_DT_SIM(object):
 
         # store the number of achieved tree iterations
         self.done_tree_iterations = tree_iteration
+        result = self.create_result(problem, hist_holder, inner_algorithm, execution_time)
+        self.res = result
+        return result
 
+    def update_history(self, res, hist_holder, tree_iteration, inner_num_gen, inner_algorithm):
+        for i in range(inner_num_gen):
+            pop = Population.merge(
+                hist_holder[tree_iteration * inner_num_gen + i].pop, res.history[i].pop)
+            # copy a template of the inner algorithm, and then modify its population and other properties
+            algo = copy.deepcopy(inner_algorithm)
+            algo.pop = pop
+            opt_pop = Population(
+                individuals=calc_nondominated_individuals(pop))
+            algo.opt = opt_pop
+            hist_holder[tree_iteration * inner_num_gen + i] = algo
+
+    def create_result(self, problem, hist_holder, inner_algorithm, execution_time):
         I = 0
         for algo in hist_holder:
             I += len(algo.pop)
@@ -227,12 +268,12 @@ class NSGAII_DT_SIM(object):
         opt_all = Population()
         for algo in hist_holder:
             opt_all = Population.merge(opt_all, algo.pop)
+        # log.info(f"opt_all: {opt_all}")
         opt_all_nds = get_nondominated_population(opt_all)
         res_holder.opt = opt_all_nds
-        self.res = res_holder
 
         return res_holder
-
+    
     def write_results(self, results_folder=RESULTS_FOLDER):
         algorithm_name = self.algorithm_name
         if self.res is None:
@@ -262,7 +303,10 @@ class NSGAII_DT_SIM(object):
         log.info(f"=====[{algorithm_name}] Writing results...")
 
         save_folder = output.create_save_folder(
-            problem, results_folder, algorithm_name)
+            problem, 
+            results_folder, 
+            algorithm_name, 
+            is_experimental=EXPERIMENTAL_MODE)
 
         # output of plots for every tree iteration
         for i in range(done_tree_iterations):
@@ -289,14 +333,14 @@ class NSGAII_DT_SIM(object):
             res_holder, save_folder, algorithm_name, algorithm_parameters)
         output.design_space(res_holder, save_folder)
         output.objective_space(res_holder, save_folder)
-        output.optimal_individuals(res_holder, save_folder)
-        output.all_critical_individuals(res_holder, save_folder)
+        #output.optimal_individuals(res_holder, save_folder)
+        #output.all_critical_individuals(res_holder, save_folder)
 
-        if WRITE_ALL_INDIVIDUALS:
-            output.all_individuals(res_holder, save_folder)
+        #if WRITE_ALL_INDIVIDUALS:
+        #    output.all_individuals(res_holder, save_folder)
 
         #persist results object
-        res_holder.persist(save_folder + "backup")
+        #res_holder.persist(save_folder + "backup")
 
     ''' Approximate whether time has left for the next tree iteration by using simulation time '''
     def is_time_left_for_next_iteration(self, start_time, _maximal_execution_time, simulation_time, critical_regions,
