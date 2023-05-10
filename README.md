@@ -1,9 +1,10 @@
 # NSGAII-DT Replication Results
 
-This repository holds the results of the NSGAII-DT replication study from the paper "Reflections on Surrogate-Assisted Search-Based Testing: A Taxonomy and Two Replication Studies based on Industrial ADAS and Simulink Models"
+This repository holds the results of the NSGAII-DT replication study from the journal paper (ISTJ) "Reflections on Surrogate-Assisted Search-Based Testing: A Taxonomy and Two Replication Studies based on Industrial ADAS and Simulink Models"
 
 ## Algorithm
 
+The reflection study has been conducted with the support of the testing framework [OpenSBT](https://git.fortiss.org/opensbt/opensbt-core).
 The implementation of NSGAII-DT is based on pymoo and an excerpt of the implementation is provided [here](algorithm/nsga2_dt_sim.py).
 
 ## Combined Results
