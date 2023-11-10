@@ -1,6 +1,6 @@
 # NSGAII-DT Replication Results
 
-This repository holds the results of the NSGAII-DT replication study from the journal paper (ISTJ) "Reflections on Surrogate-Assisted Search-Based Testing: A Taxonomy and Two Replication Studies based on Industrial ADAS and Simulink Models"
+This repository holds the results of the NSGAII-DT replication study from the journal paper (ISTJ) ["Reflections on Surrogate-Assisted Search-Based Testing: A Taxonomy and Two Replication Studies based on Industrial ADAS and Simulink Models"](https://www.sciencedirect.com/science/article/abs/pii/S0950584923001404).
 
 ## Algorithm
 
